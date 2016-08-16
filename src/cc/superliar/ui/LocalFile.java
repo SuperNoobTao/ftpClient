@@ -5,11 +5,15 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.table.DefaultTableModel;
+
+import cc.superliar.util.FileUtil;
+
+
 import java.lang.Runtime;
 import java.lang.Process;
 import java.util.Date;
 import java.text.SimpleDateFormat;
-import javax.swing.border.LineBorder;
+import javax.swing.border.LineBorder; 
 
 /**
  * 实现本地文件浏览，为继承JPanel的一个面板
@@ -17,25 +21,49 @@ import javax.swing.border.LineBorder;
  * @author Lonsy
  * @version 1.0
  */
-public class LocalFile extends JPanel implements ActionListener, MouseListener
+public class LocalFile extends JFrame implements ActionListener, MouseListener
 {
     private JButton jbUp;
+    
     private JComboBox jcbPath;
-    private JComboBox serPath;
-    private JTable jtFile;
+    
+    private JTable jtFile;//表格中文件
+
     private DefaultTableModel dtmFile;
-    private JLabel jlLocal;
+
+    private JLabel jlLocal;//底部地址栏
+    
     private File path;
+
     private String currentPath;
+  
     private int currentIndex;
+   
     private boolean init = false;
+    
+    File[] files ;
+   
+    String ftpPathop;
+    
+    private JPopupMenu popup = new JPopupMenu();//建立一个弹出式菜单  
+    private JMenuItem refresh = new JMenuItem("刷新");  //右键弹出菜单 
+    private JMenuItem delete  = new JMenuItem("删除");    
+    private JMenuItem download  = new JMenuItem("下载");   
+    private JMenuItem upload  = new JMenuItem("上传");   
+    private JMenuItem rename =  new JMenuItem("重命名");  
+    private JMenuItem upDir = new JMenuItem("上级目录");   
+    private JMenuItem showLog = new JMenuItem("显示日志信息");
+    private JButton btnNewButton_1;
 
     public LocalFile() {
-    	setBorder(new LineBorder(new Color(0, 0, 0)));
+    	
+    	this.setSize(503,650);
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        this.setLocation( (int) (screenSize.width - this.getWidth()) / 2,  (int) (screenSize.height - this.getHeight()) / 2);
+        this.setVisible(true);
         
-        JPanel jp = new JPanel();
-        jp.setBounds(10, 10, 880, 23);
-        jp.setLayout(null);
+        createPopup();
+        
         dtmFile = new LocalTableModel();
         dtmFile.addColumn("名称");
         dtmFile.addColumn("大小");
@@ -44,82 +72,126 @@ public class LocalFile extends JPanel implements ActionListener, MouseListener
         jtFile = new JTable(dtmFile);
         jtFile.setShowGrid(false);
         jtFile.addMouseListener(this);
+        
+       
         jlLocal = new JLabel("本地状态", JLabel.CENTER);
         jlLocal.setBounds(10, 575, 426, 15);
-        setLayout(null);
-
-        add(jp);
         
-        JMenu mnNewMenu = new JMenu("menu");
-        mnNewMenu.setHorizontalAlignment(SwingConstants.LEFT);
-        mnNewMenu.setBounds(0, 0, 111, 22);
-        jp.add(mnNewMenu);
-        
-        JMenuItem mntmNewMenuItem = new JMenuItem("New menu item");
-        mnNewMenu.add(mntmNewMenuItem);
-        
-        JMenu mnNewMenu_1 = new JMenu("New menu");
-        mnNewMenu_1.setBounds(121, 1, 111, 22);
-        jp.add(mnNewMenu_1);
         JScrollPane scrollPane = new JScrollPane(jtFile);
         scrollPane.setBounds(10, 109, 427, 455);
-        add(scrollPane);
-        add(jlLocal);
+        
         jcbPath = new JComboBox();
         jcbPath.setBounds(103, 76, 334, 23);
-        add(jcbPath);
-        jcbPath.addActionListener(this);
+        
         jbUp = new JButton("Up");
         jbUp.setBounds(10, 76, 83, 23);
-        add(jbUp);
-        jbUp.addActionListener(this);
-        
-        JButton btnNewButton = new JButton("Up");
-        btnNewButton.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
-        	}
-        });
-        btnNewButton.setBounds(464, 76, 83, 23);
-        add(btnNewButton);
-        
-        JScrollPane scrollPane_1 = new JScrollPane((Component) null);
-        scrollPane_1.setBounds(464, 109, 427, 455);
-        add(scrollPane_1);
-        
-        JLabel label = new JLabel("xxxx", SwingConstants.CENTER);
-        label.setBounds(463, 575, 427, 15);
-        add(label);
-        
-        serPath = new JComboBox();
-        serPath.setBounds(557, 77, 334, 21);
-        add(serPath);
-        
-        JButton btnConnect = new JButton("连接");
-        btnConnect.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
-        		new FrmConnect();
-        	}
-        });
+
+        JButton btnConnect = new JButton("注销");      
         btnConnect.setBounds(11, 43, 93, 23);
-        add(btnConnect);
         
-        JButton btnNewButton_2 = new JButton("New button");
-        btnNewButton_2.setBounds(114, 45, 93, 23);
-        add(btnNewButton_2);
         
-        JButton btnNewButton_3 = new JButton("New button");
-        btnNewButton_3.setBounds(217, 43, 93, 23);
-        add(btnNewButton_3);
+        getContentPane().setLayout(null); 
+        getContentPane().add(scrollPane);
+        getContentPane().add(jlLocal);
+        getContentPane().add(jcbPath);
+        getContentPane(  ).add(jbUp);
+        getContentPane().add(btnConnect);
+        
+        JButton btnNewButton = new JButton("上传");
+        btnNewButton.setBounds(113, 43, 93, 23);
+        getContentPane().add(btnNewButton);
+        btnNewButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+            	JFileChooser fd = new JFileChooser();  
+            	fd.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);  
+            	fd.showOpenDialog(null);  
+            	File f = fd.getSelectedFile();  
+            	String ftpPath = jlLocal.getText().substring(10);
+            	ftpPathop =  jlLocal.getText().replace("\\", "/");
+            	path = new File(ftpPathop);
+            	if(f != null){
+            		if(f.isDirectory() == false){
+            		System.out.println("是文件"+f.toString()+","+f.getName()+"根目录="+path+",ftpPath="+ftpPath);       		
+            		FileUtil.ftpUpload(f.toString(),ftpPath,f.getName());
+            		listFiles(path);    
+            		}else{  	
+            			System.out.println("是文件夹"+f.toString()+","+f.getName()+"根目录="+path);
+            			try {
+							FileUtil.ftpUpload2(f.toString(),ftpPath);
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+            			listFiles(path);    
+            	}
+            	}
+           }
+        });
+        
+        JButton button = new JButton("下载");
+        button.setBounds(216, 43, 93, 23);
+        getContentPane().add(button);
+        
+        btnNewButton_1 = new JButton("全部下载");
+        btnNewButton_1.setBounds(322, 43, 93, 23);
+        getContentPane().add(btnNewButton_1);
+        btnNewButton_1.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+            	
+            	String path = jlLocal.getText();
+              	
+            	System.out.println(path);
+            }
+        });
+        
+        
+        
+        
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+            	
+        		int i = jtFile.getSelectedRow();
+                System.out.println(i);
+            	if (i < 0) {
+					JOptionPane.showMessageDialog(null, "请选择文件", "提示",
+							JOptionPane.ERROR_MESSAGE);
+					return;
+				}
+            	String path = jlLocal.getText();
+            	
+            	String fileName = files[i].getName();
+            	
+            	String ftpPath = path+"\\"+fileName;
+            	
+                FileUtil.createDir("D:\\shentao\\dwonload\\"+files[i].getName());  
+                
+            	FileUtil.fileDownload("D:\\shentao\\dwonload\\"+files[i].getName(),ftpPath.substring(10));
+            	
+            	System.out.println(ftpPath);
+
+            }
+        });
+        
+        
+        jcbPath.addActionListener(this);
+        jbUp.addActionListener(this);
 
         //显示系统分区及文件路径 并 在JTabel中显示当前路径的文件信息
-        path = new File(System.getProperty("user.dir"));
+        path = new File("E:/ftpTest");
         System.out.println("path="+path);
         listFiles(path);    
-
         init = true;
+        
+     
     }
 
-    //处理路径的选择事件
+    
+    private void createPopup() {
+		// TODO Auto-generated method stub
+
+	}
+
+	//处理路径的选择事件
     public void actionPerformed(ActionEvent e) {
         if (e.getSource()==jbUp && jtFile.getValueAt(0, 0).toString().equals("返回上级")
                 && jtFile.getValueAt(0, 2).toString().equals(""))
@@ -250,14 +322,10 @@ public class LocalFile extends JPanel implements ActionListener, MouseListener
         //清空现有数据
         dtmFile.setRowCount(0);
 
-        //如果判断为非分区根目录，则添加 返回上级 一行
-        if (strPath.split("////").length > 1)
-        {
-            dtmFile.addRow(new String[]{"返回上级", "", "", ""});
-        }
+      
 
         //列出当前目录所有目录及文件
-        File[] files = path.listFiles();
+        files = path.listFiles();
         for (int i=0; i<files.length; i++)
         {
             String name = files[i].getName();
@@ -270,14 +338,14 @@ public class LocalFile extends JPanel implements ActionListener, MouseListener
                 if (name.lastIndexOf(".") != -1)
                 {
                     dtmFile.addRow(new String[]{name.substring(0, name.lastIndexOf(".")), 
-                            sizeFormat(files[i].length()), 
+                            FileUtil.sizeFormat(files[i].length()), 
                             name.substring(name.lastIndexOf(".") + 1),
                             new SimpleDateFormat("yyyy-MM-dd hh:mm").format(new Date(files[i].lastModified()))});
                 }
                 else
                 {
                     dtmFile.addRow(new String[]{name, 
-                            sizeFormat(files[i].length()), 
+                    		FileUtil.sizeFormat(files[i].length()), 
                             "",
                             new SimpleDateFormat("yyyy-MM-dd hh:mm").format(new Date(files[i].lastModified()))});
                 }
@@ -288,35 +356,25 @@ public class LocalFile extends JPanel implements ActionListener, MouseListener
 
         return true;
     }
+    
 
-    //将文件大小转换成相应字符串格式
-    private String sizeFormat(long length) {
-        long kb;
-        if (length < 1024)
-        {
-            return String.valueOf(length);
-        }
-        else if ((kb = length / 1024) < 1024)
-        {
-            return (String.valueOf(kb) + "kb");
-        }
-        else
-        {
-            return (String.valueOf(length / 1024 / 1024) + "kb");
-        }
-    }
 
-    //测试
-    public static void main(String[] args) {
-        JFrame jf = new JFrame("测试");
-        jf.setSize(300, 400);
-        jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        Dimension di = Toolkit.getDefaultToolkit().getScreenSize();
-        jf.setLocation((int)(di.getWidth() - jf.getWidth()) / 2, 
-                (int)(di.getHeight() - jf.getHeight()) / 2);
-        jf.getContentPane().add(new LocalFile());
-        jf.setVisible(true);
-    }
+
+   
+
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		try {
+			LocalFile dialog = new LocalFile();
+			dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+			dialog.setVisible(true);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 
     //实现相应的tablemodel类
     class LocalTableModel extends DefaultTableModel

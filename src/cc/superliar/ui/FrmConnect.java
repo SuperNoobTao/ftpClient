@@ -74,22 +74,22 @@ public class FrmConnect extends JDialog {
 			contentPanel.add(lblPort);
 		}
 		
-		edtAddress = new JTextField();
+		edtAddress = new JTextField("192.168.3.114");
 		edtAddress.setBounds(116, 67, 111, 21);
 		contentPanel.add(edtAddress);
 		edtAddress.setColumns(10);
 		
-		edtUser = new JTextField();
+		edtUser = new JTextField("shentao");
 		edtUser.setColumns(10);
 		edtUser.setBounds(116, 102, 111, 21);
 		contentPanel.add(edtUser);
 		
-		edtPwd = new JTextField();
+		edtPwd = new JTextField("123wsst");
 		edtPwd.setColumns(10);
 		edtPwd.setBounds(116, 139, 111, 21);
 		contentPanel.add(edtPwd);
 		
-		edtPort = new JTextField();
+		edtPort = new JTextField("21");
 		edtPort.setColumns(10);
 		edtPort.setBounds(310, 67, 66, 21);
 		contentPanel.add(edtPort);
@@ -113,8 +113,12 @@ public class FrmConnect extends JDialog {
 				        String username = edtUser.getText();
 				        String password = edtPwd.getText();
 				        System.out.println(address+port+username+password);
-				        FileUtil.login(address,port,username,password);
+				        boolean i = FileUtil.login(address,port,username,password);
 				        dispose();
+				        if(i){
+				        LocalFile localFile = new LocalFile();
+				        localFile.setVisible(true);
+				        }
 					}
 				});
 				okButton.setActionCommand("OK");
